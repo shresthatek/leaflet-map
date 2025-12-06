@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Web Map</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
+    <style>#map { height: 100vh; }</style>
+</head>
+<body>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<script>
+var map = L.map('map').setView([27.7, 85.33], 10);
+
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+var m1 = L.marker([27.7, 85.33]).bindPopup("Marker 1: Kathmandu");
+var m2 = L.marker([27.74, 85.32]).bindPopup("Marker 2: Location B");
+var m3 = L.marker([27.72, 85.36]).bindPopup("Marker 3: Location C");
+
+var markerGroup = L.layerGroup([m1, m2, m3]).addTo(map);
+
+fetch("data.geojson")
+  .then(res => res.json())
+  .then(data => {
+      geojsonLayer = L.geoJSON(data, {
+          onEachFeature: function (feature, layer) {
+              layer.bindPopup("GeoJSON Feature: " + feature.properties.name);
+          },
+          style: { color: "red", weight: 2 }
+      }).addTo(map);
+  });
+
+var baseLayers = { "OpenStreetMap": osm };
+var overlays = { "Markers": markerGroup };
+
+L.control.layers(baseLayers, overlays).addTo(map);
+L.control.scale().addTo(map);
+
+L.Routing.control({
+    waypoints: [
+        L.latLng(27.7, 85.33),
+        L.latLng(27.74, 85.32)
+    ]
+}).addTo(map);
+
+axios.get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson")
+.then(response => {
+    L.geoJSON(response.data, {
+        pointToLayer: function (feat, latlng) {
+            return L.circleMarker(latlng, { radius: 5 });
+        },
+        onEachFeature: function (feature, layer) {
+            layer.bindPopup("Earthquake Magnitude: " + feature.properties.mag);
+        }
+    }).addTo(map);
+});
+
+var animatedMarker = L.circleMarker([27.7, 85.33], { radius: 8 }).addTo(map);
+var lat = 27.7, lng = 85.33;
+setInterval(() => {
+    lat += 0.001;
+    animatedMarker.setLatLng([lat, lng]);
+}, 800);
+</script>
+</body>
+</html>
